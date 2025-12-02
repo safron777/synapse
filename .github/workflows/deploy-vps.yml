@@ -2,7 +2,7 @@ name: Deploy Matrix to VPS
 
 on:
   push:
-    branches: [main, master]
+    branches: [main, master, develop]
   workflow_dispatch:
 
 jobs:
@@ -30,7 +30,7 @@ jobs:
         ssh -o StrictHostKeyChecking=no $VPS_USER@$VPS_HOST << 'EOF'
           cd /opt/synapse
           
-          git pull origin main
+          git pull origin develop
           
           cat > .env << 'ENVEOF'
         MATRIX_DOMAIN=${{ secrets.MATRIX_DOMAIN }}
