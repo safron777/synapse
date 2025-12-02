@@ -1,0 +1,46 @@
+name: Deploy Matrix to VPS
+
+on:
+  push:
+    branches: [main, master]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup SSH
+      uses: webfactory/ssh-agent@v0.7.0
+      with:
+        ssh-private-key: ${{ secrets.VPS_SSH_KEY }}
+        
+    - name: Deploy to VPS
+      env:
+        VPS_HOST: ${{ secrets.VPS_HOST }}
+        VPS_USER: ${{ secrets.VPS_USER }}
+        MATRIX_DOMAIN: ${{ secrets.MATRIX_DOMAIN }}
+        TURN_DOMAIN: ${{ secrets.TURN_DOMAIN }}
+        POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
+        COTURN_SECRET: ${{ secrets.COTURN_SECRET }}
+      run: |
+        ssh -o StrictHostKeyChecking=no $VPS_USER@$VPS_HOST << 'EOF'
+          cd /opt/synapse
+          
+          git pull origin main
+          
+          cat > .env << 'ENVEOF'
+        MATRIX_DOMAIN=${{ secrets.MATRIX_DOMAIN }}
+        TURN_DOMAIN=${{ secrets.TURN_DOMAIN }}
+        POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD }}
+        COTURN_SECRET=${{ secrets.COTURN_SECRET }}
+        ENVEOF
+          
+          chmod +x deploy.sh
+          ./deploy.sh
+          
+          docker system prune -f
+        EOF
