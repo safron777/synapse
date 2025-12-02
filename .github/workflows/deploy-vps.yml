@@ -13,10 +13,26 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
       
-    - name: Setup SSH
-      uses: webfactory/ssh-agent@v0.7.0
-      with:
-        ssh-private-key: ${{ secrets.VPS_SSH_KEY }}
+    - name: Setup SSH with encrypted key
+      env:
+        SSH_PRIVATE_KEY: ${{ secrets.VPS_SSH_KEY }}
+        SSH_PASSPHRASE: ${{ secrets.SSH_PASSPHRASE }}
+        VPS_HOST: ${{ secrets.VPS_HOST }}
+      run: |
+        sudo apt-get update && sudo apt-get install -y expect
+        mkdir -p ~/.ssh
+        echo "$SSH_PRIVATE_KEY" > ~/.ssh/id_rsa
+        chmod 600 ~/.ssh/id_rsa
+        ssh-keyscan -H $VPS_HOST >> ~/.ssh/known_hosts
+        
+        # Start ssh-agent and add key with passphrase
+        eval $(ssh-agent -s)
+        expect << EOF
+        spawn ssh-add ~/.ssh/id_rsa
+        expect "Enter passphrase"
+        send "$SSH_PASSPHRASE\r"
+        expect eof
+        EOF
         
     - name: Deploy to VPS
       env:
